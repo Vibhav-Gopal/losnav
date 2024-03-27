@@ -3,7 +3,7 @@
 import rospy
 import time
 import math
-from std_msgs.msg import Float64
+from std_msgs.msg import Float64, Int32
 from geometry_msgs.msg import Vector3
 
 from tvmc import MotionController, DoF, ControlMode
@@ -26,12 +26,12 @@ YAW_KD = -0.3
 YAW_TARGET = 0
 YAW_ACCEPTABLE_ERROR = 1
 
-g_relPos = int
+g_relPos = 0
 yaw_curr_point=0
 
 def update_gate(x):
     global g_relPos
-    g_relPos = x
+    g_relPos = x.data
 
 def orientation(x):
     #x-roll,y-pitch,z-yaw
@@ -70,17 +70,19 @@ m.set_control_mode(DoF.SURGE, ControlMode.OPEN_LOOP)
 #subscribers
 rospy.Subscriber("/emulation/orientation", Vector3, orientation)
 rospy.Subscriber("/emulation/depth", Float64, depth)
-rospy.Subscriber("/localization/gateHeading", int, update_gate)
+rospy.Subscriber("/localization/gateHeading", Int32, update_gate)
 
 rate = rospy.Rate(5)
 
 while rospy.is_shutdown() == False:
 
-
-    m.set_target_point(((5*(g_relPos))+yaw_curr_point)%360)
+    g_relPos=g_relPos-1
+    m.set_target_point(DoF.YAW,((5*(g_relPos))+yaw_curr_point)%360)
     if(g_relPos not in [-1,0,1]):
+        print("Not surge")
         m.set_thrust(DoF.SURGE, 0)
     else:
+        print("surge")
         m.set_thrust(DoF.SURGE, -70)
 
     '''if(g_relPos.x!=0):
